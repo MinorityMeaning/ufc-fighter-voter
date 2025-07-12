@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900;
+  }
+  
+  .btn-primary {
+    @apply btn bg-ufc-red hover:bg-red-700 text-white focus:ring-ufc-red;
+  }
+  
+  .btn-secondary {
+    @apply btn bg-gray-700 hover:bg-gray-600 text-white focus:ring-gray-500;
+  }
+  
+  .btn-gold {
+    @apply btn bg-ufc-gold hover:bg-yellow-500 text-black focus:ring-ufc-gold;
+  }
+  
+  .btn-disabled {
+    @apply btn bg-gray-600 text-gray-400 cursor-not-allowed;
+  }
+  
+  .card {
+    @apply bg-gray-800 rounded-none border border-gray-700 shadow-lg;
+  }
+  
+  .card-hover {
+    @apply card hover:border-gray-600 hover:shadow-xl transition-all duration-200;
+  }
+  
+  .fighter-card {
+    @apply card-hover gap-0 cursor-pointer min-h-0 p-0 transform hover:scale-105 transition-transform duration-200;
+  }
+  
+  .fighter-card-selected {
+    @apply fighter-card border-ufc-red shadow-glow;
+  }
+  
+  .progress-bar {
+    @apply h-4 bg-gray-800 rounded-none overflow-hidden flex;
+  }
+  
+  .progress-fill-green {
+    @apply bg-ufc-red h-full text-white text-xs font-bold transition-all duration-500;
+  }
+  
+  .progress-fill-blue {
+    @apply bg-blue-600 h-full text-white text-xs font-bold transition-all duration-500;
+  }
+  
+  .spinner {
+    @apply animate-spin rounded-full border-2 border-gray-300 border-t-ufc-red;
+  }
+  
+  .pulse-red {
+    @apply animate-pulse-fast;
+    box-shadow: 0 0 20px rgba(36, 181, 159, 0.3);
+  }
+  
+  .text-gradient {
+    @apply bg-gradient-to-r from-ufc-red to-ufc-gold bg-clip-text text-transparent;
+  }
+}
+
+@layer utilities {
+  .text-shadow {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  }
+  
+  .glass {
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-600 rounded-lg;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-500;
+}
+
+/* Animation for vote counter */
+.vote-counter {
+  transition: all 0.3s ease;
+}
+
+.vote-counter.updated {
+  @apply scale-110 text-ufc-gold;
+  animation: highlight 0.5s ease-in-out;
+}
+
+@keyframes highlight {
+  0% { 
+    transform: scale(1); 
+  }
+  50% { 
+    transform: scale(1.1); 
+    color: #f2b90c;
+  }
+  100% { 
+    transform: scale(1); 
+  }
+} 

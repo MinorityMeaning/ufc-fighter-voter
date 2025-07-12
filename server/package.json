@@ -1,0 +1,25 @@
+{
+  "name": "ufc-voting-server",
+  "version": "1.0.0",
+  "description": "Backend server for UFC voting widget",
+  "main": "src/serverMemory.js",
+  "scripts": {
+    "dev": "nodemon src/serverMemory.js",
+    "start": "node src/serverMemory.js"
+  },
+  "dependencies": {
+    "axios": "^1.10.0",
+    "cheerio": "^1.1.0",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "socket.io": "^4.7.5",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "type": "module"
+}
+ 

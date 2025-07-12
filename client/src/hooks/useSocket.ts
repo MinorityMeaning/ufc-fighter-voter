@@ -1,0 +1,146 @@
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { io, Socket } from 'socket.io-client';
+import type { UseSocketReturn } from '../types';
+
+// Автоопределение URL для подключения
+const getSocketURL = () => {
+  const hostname = window.location.hostname;
+  
+  // Если localhost или IP адрес, используем их
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://192.168.0.14:3001'; // Используем ваш локальный IP
+  }
+  
+  // В остальных случаях используем текущий хост
+  return `http://${hostname}:3001`;
+};
+
+const SOCKET_URL = getSocketURL();
+
+export const useSocket = (): UseSocketReturn => {
+  const [isConnected, setIsConnected] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const socketRef = useRef<Socket | null>(null);
+
+  const connect = useCallback(() => {
+    if (socketRef.current?.connected) {
+      return;
+    }
+
+    try {
+      const socket = io(SOCKET_URL, {
+        transports: ['polling', 'websocket'], // Polling первым для мобильных
+        reconnection: true,
+        reconnectionAttempts: 10, // Больше попыток
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        timeout: 10000, // Меньше timeout для быстрого фидбека
+        forceNew: true, // Принудительно новое соединение
+      });
+
+      socketRef.current = socket;
+
+      socket.on('connect', () => {
+        setIsConnected(true);
+        setError(null);
+      });
+
+      socket.on('disconnect', (reason) => {
+        setIsConnected(false);
+        
+        if (reason === 'io server disconnect') {
+          // Сервер инициировал отключение, переподключаемся
+          socket.connect();
+        }
+      });
+
+      socket.on('connect_error', (err) => {
+        setError(`Ошибка подключения: ${err.message}`);
+        setIsConnected(false);
+      });
+
+      socket.on('error', (err) => {
+        setError(`Ошибка сокета: ${err.message || 'Неизвестная ошибка'}`);
+      });
+
+      // Пинг для поддержания соединения
+      const pingInterval = setInterval(() => {
+        if (socket.connected) {
+          socket.emit('ping');
+        }
+      }, 30000);
+
+      socket.on('pong', () => {
+        // Соединение активно
+      });
+
+      // Очистка интервала при отключении
+      socket.on('disconnect', () => {
+        clearInterval(pingInterval);
+      });
+
+    } catch (err) {
+      setError('Не удалось создать соединение');
+    }
+  }, []);
+
+  const disconnect = useCallback(() => {
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
+      setIsConnected(false);
+    }
+  }, []);
+
+  const emit = useCallback((event: string, ...args: any[]) => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit(event, ...args);
+    }
+  }, []);
+
+  const on = useCallback((event: string, callback: (...args: any[]) => void) => {
+    if (socketRef.current) {
+      socketRef.current.on(event, callback);
+    }
+  }, []);
+
+  const off = useCallback((event: string, callback?: (...args: any[]) => void) => {
+    if (socketRef.current) {
+      if (callback) {
+        socketRef.current.off(event, callback);
+      } else {
+        socketRef.current.off(event);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    connect();
+
+    return () => {
+      disconnect();
+    };
+  }, [connect, disconnect]);
+
+  // Автопереподключение при потере соединения
+  useEffect(() => {
+    if (!isConnected && !error) {
+      const reconnectTimer = setTimeout(() => {
+        if (!socketRef.current?.connected) {
+          connect();
+        }
+      }, 3000);
+
+      return () => clearTimeout(reconnectTimer);
+    }
+  }, [isConnected, error, connect]);
+
+  return {
+    socket: socketRef.current,
+    isConnected,
+    error,
+    emit,
+    on,
+    off,
+  };
+}; 
