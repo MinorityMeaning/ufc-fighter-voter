@@ -1,8 +1,8 @@
 module.exports = {
   apps: [{
     name: 'ufc-voiting-server',
-    script: 'src/serverMemory.js',
-    cwd: './server',
+    script: './src/serverMemory.js',
+    cwd: __dirname,
     instances: 1,
     autorestart: true,
     watch: false,

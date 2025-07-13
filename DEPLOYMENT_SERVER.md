@@ -61,9 +61,8 @@ CHROME_DISABLE_GPU=true
 pm2 stop ufc-voiting-server
 pm2 delete ufc-voiting-server
 
-# Запускаем новый процесс
-cd server
-pm2 start ecosystem.config.cjs --env production
+# Запускаем новый процесс (можно из любой папки)
+pm2 start server/ecosystem.config.cjs --env production
 
 # Сохраняем PM2 конфигурацию
 pm2 save
@@ -116,8 +115,8 @@ git pull
 npm install
 cd server && npm install
 
-# Запускаем сервер
-pm2 start ecosystem.config.cjs --env production
+# Запускаем сервер (можно из любой папки)
+pm2 start server/ecosystem.config.cjs --env production
 ```
 
 ### Просмотр мониторинга
