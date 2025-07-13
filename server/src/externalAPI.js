@@ -108,6 +108,10 @@ class ExternalFightAPI {
       }
 
       // Проверяем, отличается ли новый бой от текущего
+      console.log(`🔍 Сравнение боев:`);
+      console.log(`   Текущий: ${currentState.fight ? `${currentState.fight.fighter1_name} vs ${currentState.fight.fighter2_name}` : 'НЕТ'}`);
+      console.log(`   Новый: ${newFightData.fighter1_name} vs ${newFightData.fighter2_name}`);
+      
       if (this.shouldStartNewFight(currentState.fight, newFightData)) {
         console.log(`🆕 Найден новый бой: ${newFightData.fighter1_name} vs ${newFightData.fighter2_name}`);
         
@@ -145,16 +149,23 @@ class ExternalFightAPI {
 
   // Определить, нужно ли начинать новый бой
   shouldStartNewFight(currentFight, newFightData) {
+    console.log(`🔍 shouldStartNewFight проверка:`);
+    console.log(`   currentFight: ${currentFight ? 'ЕСТЬ' : 'НЕТ'}`);
+    console.log(`   newFightData: ${newFightData ? 'ЕСТЬ' : 'НЕТ'}`);
+    
     if (!currentFight) {
+      console.log(`   Результат: НЕТ текущего боя -> НАЧИНАЕМ НОВЫЙ`);
       return true; // Нет текущего боя, начинаем новый
     }
 
     if (!newFightData) {
+      console.log(`   Результат: НЕТ новых данных -> НЕ НАЧИНАЕМ`);
       return false; // Нет новых данных
     }
 
     // Сравниваем по ID или по именам бойцов
     if (newFightData.id && currentFight.id !== newFightData.id) {
+      console.log(`   Результат: РАЗНЫЕ ID -> НАЧИНАЕМ НОВЫЙ`);
       return true;
     }
 
@@ -162,7 +173,10 @@ class ExternalFightAPI {
     const currentNames = `${currentFight.fighter1_name} vs ${currentFight.fighter2_name}`;
     const newNames = `${newFightData.fighter1_name} vs ${newFightData.fighter2_name}`;
     
-    return currentNames !== newNames;
+    const shouldStart = currentNames !== newNames;
+    console.log(`   Результат: ${shouldStart ? 'РАЗНЫЕ ИМЕНА -> НАЧИНАЕМ НОВЫЙ' : 'ТЕ ЖЕ ИМЕНА -> НЕ НАЧИНАЕМ'}`);
+    
+    return shouldStart;
   }
 
   // Уведомить всех клиентов о новом бое
@@ -215,15 +229,22 @@ class ExternalFightAPI {
       
       const result = await webParser.parsePage();
       
-      // Добавляем дополнительные поля для совместимости
-      result.status = 'active';
-      result.is_active = true;
-      result.startTime = new Date().toISOString();
-      result.fighter1_votes = 0;
-      result.fighter2_votes = 0;
-      result.total_votes = 0;
+      // Если результат - массив боев, берем первый
+      let fightData = result;
+      if (Array.isArray(result) && result.length > 0) {
+        fightData = result[0];
+        console.log(`📄 Возвращаем бой: ${fightData.fighter1_name} vs ${fightData.fighter2_name} (живой: ${fightData.is_live ? 'ДА' : 'НЕТ'})`);
+      }
       
-      return result;
+      // Добавляем дополнительные поля для совместимости
+      fightData.status = 'active';
+      fightData.is_active = true;
+      fightData.startTime = new Date().toISOString();
+      fightData.fighter1_votes = 0;
+      fightData.fighter2_votes = 0;
+      fightData.total_votes = 0;
+      
+      return fightData;
     } catch (error) {
       console.error('❌ Ошибка веб-парсинга:', error);
       throw error;

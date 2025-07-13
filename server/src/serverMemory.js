@@ -326,6 +326,11 @@ async function startServer() {
   try {
     console.log('🚀 Запуск UFC сервера без БД...');
     
+    // Инициализируем Selenium парсер
+    const webParser = await import('./webParserSelenium.js');
+    await webParser.default.loadConfig();
+    console.log('📥 Конфигурация парсера загружена');
+    
     // Восстанавливаем состояние из backup (если есть)
     const restored = await memoryStorage.restoreFromFile();
     if (restored) {

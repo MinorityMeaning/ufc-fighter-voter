@@ -189,9 +189,24 @@ class MemoryStorage {
       const dir = path.dirname(filePath);
       await fs.mkdir(dir, { recursive: true });
       
+      // Убеждаемся, что currentFight содержит все необходимые поля
+      const currentFight = this.gameState.currentFight ? {
+        ...this.gameState.currentFight,
+        // Добавляем недостающие поля если их нет
+        fighter1_name: this.gameState.currentFight.fighter1_name || '',
+        fighter2_name: this.gameState.currentFight.fighter2_name || '',
+        fighter1_image: this.gameState.currentFight.fighter1_image || '',
+        fighter2_image: this.gameState.currentFight.fighter2_image || '',
+        event_name: this.gameState.currentFight.event_name || '',
+        is_active: this.gameState.currentFight.is_active !== undefined ? this.gameState.currentFight.is_active : this.gameState.isActive,
+        fighter1_votes: this.gameState.currentFight.fighter1_votes || this.gameState.votes.fighter1,
+        fighter2_votes: this.gameState.currentFight.fighter2_votes || this.gameState.votes.fighter2,
+        total_votes: this.gameState.currentFight.total_votes || this.gameState.votes.total
+      } : null;
+      
       // Конвертируем Map в обычный объект для JSON
       const backupData = {
-        currentFight: this.gameState.currentFight,
+        currentFight: currentFight,
         votes: this.gameState.votes,
         userSessions: Object.fromEntries(this.gameState.userSessions),
         fightHistory: this.gameState.fightHistory,
@@ -220,6 +235,24 @@ class MemoryStorage {
       this.gameState.fightHistory = backupData.fightHistory || [];
       this.gameState.isActive = backupData.isActive || false;
       this.gameState.lastUpdate = backupData.lastUpdate;
+      
+      // Восстанавливаем недостающие поля из истории боев
+      if (this.gameState.currentFight && !this.gameState.currentFight.fighter1_name) {
+        // Ищем последний бой в истории с тем же ID
+        const lastFight = this.gameState.fightHistory.find(fight => 
+          fight.id === this.gameState.currentFight.id
+        );
+        
+        if (lastFight) {
+          // Восстанавливаем данные из истории
+          this.gameState.currentFight.fighter1_name = lastFight.fighter1_name;
+          this.gameState.currentFight.fighter2_name = lastFight.fighter2_name;
+          this.gameState.currentFight.fighter1_image = lastFight.fighter1_image;
+          this.gameState.currentFight.fighter2_image = lastFight.fighter2_image;
+          this.gameState.currentFight.event_name = lastFight.event_name;
+          console.log(`🔧 Восстановлены данные боя: ${lastFight.fighter1_name} vs ${lastFight.fighter2_name}`);
+        }
+      }
       
       // Добавляем недостающие поля в восстановленный бой для совместимости
       if (this.gameState.currentFight && this.gameState.currentFight.is_active === undefined) {

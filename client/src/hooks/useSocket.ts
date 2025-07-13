@@ -6,7 +6,7 @@ import type { UseSocketReturn } from '../types';
 const getSocketURL = () => {
   const hostname = window.location.hostname;
   
-  // Если localhost или 127.0.0.1, используем localhost для WebSocket
+  // Для localhost используем прямой URL (Vite прокси не работает для WebSocket)
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://localhost:3001';
   }
@@ -16,8 +16,8 @@ const getSocketURL = () => {
     return '/'; // Используем относительный путь для прокси через nginx
   }
   
-  // В остальных случаях используем текущий хост
-  return `http://${hostname}:3001`;
+  // В остальных случаях используем относительный путь
+  return '/';
 };
 
 const SOCKET_URL = getSocketURL();
@@ -33,7 +33,9 @@ export const useSocket = (): UseSocketReturn => {
     }
 
     try {
+      console.log('🔌 Подключение к WebSocket:', SOCKET_URL);
       const socket = io(SOCKET_URL, {
+        query: { v: Date.now() }, // Принудительно обновляем кэш
         path: '/socket.io/', // Добавляем путь для прокси
         transports: ['polling', 'websocket'], // Polling первым для мобильных
         reconnection: true,
@@ -47,6 +49,7 @@ export const useSocket = (): UseSocketReturn => {
       socketRef.current = socket;
 
       socket.on('connect', () => {
+        console.log('✅ WebSocket подключен успешно');
         setIsConnected(true);
         setError(null);
       });
@@ -61,6 +64,7 @@ export const useSocket = (): UseSocketReturn => {
       });
 
       socket.on('connect_error', (err) => {
+        console.error('❌ WebSocket ошибка подключения:', err);
         setError(`Ошибка подключения: ${err.message}`);
         setIsConnected(false);
       });

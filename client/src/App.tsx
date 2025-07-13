@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { VotingWidget } from './components/VotingWidget';
 import { AdminPanel } from './components/AdminPanel';
 import { io, Socket } from 'socket.io-client';
@@ -30,6 +30,7 @@ function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [currentFight, setCurrentFight] = useState<Fight | null>(null);
   const [voteStats, setVoteStats] = useState<VoteStats>({ fighter1: 0, fighter2: 0, total: 0 });
+  const socketRef = useRef<Socket | null>(null);
 
   // Генерируем user_session при загрузке
   useEffect(() => {
@@ -48,6 +49,11 @@ function App() {
 
   // Socket connection
   useEffect(() => {
+    // Закрываем предыдущее соединение, если оно есть
+    if (socketRef.current) {
+      socketRef.current.close();
+    }
+
     // В development используем прокси Vite, в production - относительный путь
     const socketUrl = import.meta.env.MODE === 'development' 
       ? '/' 
@@ -57,7 +63,7 @@ function App() {
       path: '/socket.io/',
       transports: ['websocket', 'polling']
     });
-    
+
     newSocket.on('connect', () => {
       console.log('Connected to server');
       setIsConnected(true);
@@ -125,17 +131,23 @@ function App() {
       setVoteStats(data.votes);
     });
 
+    socketRef.current = newSocket;
     setSocket(newSocket);
 
     return () => {
-      newSocket.close();
+      if (newSocket.connected) {
+        newSocket.close();
+      } else {
+        // Если соединение еще не установлено, просто отключаем все обработчики
+        newSocket.removeAllListeners();
+      }
     };
   }, []); // УБРАЛИ ЗАВИСИМОСТЬ currentFight
 
   const handleVote = (fighter: 1 | 2) => {
-    if (socket && currentFight) {
+    if (socketRef.current && currentFight) {
       console.log(`Voting for fighter ${fighter}`);
-      socket.emit('vote', { 
+      socketRef.current.emit('vote', { 
         fight_id: currentFight.id,
         fighter_choice: fighter,
         user_session: localStorage.getItem('ufc_user_session') || 'anonymous'

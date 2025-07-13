@@ -315,6 +315,11 @@ class WebParserSelenium {
 
   // Парсинг всех боев с Selenium
   async parseAllFightsWithSelenium(driver, selectors, targetUrl, liveAnalysis) {
+    console.log(`🔍 Начинаем парсинг всех боев с Selenium`);
+    console.log(`🔍 Селекторы для изображений:`);
+    console.log(`   🖼️ Fighter1 image: "${selectors.fighter1Image}"`);
+    console.log(`   🖼️ Fighter2 image: "${selectors.fighter2Image}"`);
+    
     const fights = await driver.executeScript((selectors, liveAnalysis) => {
       const fightElements = document.querySelectorAll(selectors.fightContainer);
       const fights = [];
@@ -326,10 +331,27 @@ class WebParserSelenium {
           const fighter1Name = fightElement.querySelector(selectors.fighter1Name)?.textContent?.trim() || '';
           const fighter2Name = fightElement.querySelector(selectors.fighter2Name)?.textContent?.trim() || '';
           
+          console.log(`🔍 Парсинг боя #${index + 1}:`);
+          console.log(`   Имя 1: "${fighter1Name}" (селектор: ${selectors.fighter1Name})`);
+          console.log(`   Имя 2: "${fighter2Name}" (селектор: ${selectors.fighter2Name})`);
+          
           if (fighter1Name && fighter2Name) {
-            const fighter1Image = fightElement.querySelector(selectors.fighter1Image)?.src || '';
-            const fighter2Image = fightElement.querySelector(selectors.fighter2Image)?.src || '';
+            const fighter1ImageElement = fightElement.querySelector(selectors.fighter1Image);
+            const fighter2ImageElement = fightElement.querySelector(selectors.fighter2Image);
+            const fighter1Image = fighter1ImageElement?.src || '';
+            const fighter2Image = fighter2ImageElement?.src || '';
             const description = fightElement.querySelector(selectors.description)?.textContent?.trim() || '';
+            
+            console.log(`🔍 Бой ${index + 1}:`);
+            console.log(`   👤 ${fighter1Name} vs ${fighter2Name}`);
+            console.log(`   🖼️ Fighter1 image element: ${fighter1ImageElement ? 'НАЙДЕН' : 'НЕ НАЙДЕН'}`);
+            console.log(`   🖼️ Fighter2 image element: ${fighter2ImageElement ? 'НАЙДЕН' : 'НЕ НАЙДЕН'}`);
+            console.log(`   🖼️ Fighter1 image src: ${fighter1Image || 'ПУСТО'}`);
+            console.log(`   🖼️ Fighter2 image src: ${fighter2Image || 'ПУСТО'}`);
+            console.log(`   📝 Description: ${description || 'ПУСТО'}`);
+            
+            console.log(`   Изображение 1: "${fighter1Image}" (селектор: ${selectors.fighter1Image})`);
+            console.log(`   Изображение 2: "${fighter2Image}" (селектор: ${selectors.fighter2Image})`);
             
             // Проверяем live статус для этого боя
             const liveBanner = fightElement.querySelector(selectors.liveIndicator);
@@ -377,6 +399,8 @@ class WebParserSelenium {
       fight.id = this.generateFightId(fight.fighter1_name, fight.fighter2_name);
       
       console.log(`✅ Бой #${index + 1}: ${fight.fighter1_name} vs ${fight.fighter2_name} (живой: ${fight.is_live ? 'ДА' : 'НЕТ'}, outcome: ${fight.has_outcome ? 'ЕСТЬ' : 'НЕТ'})`);
+      console.log(`   📸 Изображения: ${fight.fighter1_image ? '✅' : '❌'} / ${fight.fighter2_image ? '✅' : '❌'}`);
+      console.log(`   🏷️ Имена: ${fight.fighter1_name ? '✅' : '❌'} / ${fight.fighter2_name ? '✅' : '❌'}`);
     });
 
     console.log(`📊 Извлечено ${fights.length} боев с Selenium`);
@@ -437,6 +461,8 @@ class WebParserSelenium {
     
     this.lastParseResult = result;
     console.log(`✅ Парсинг с Selenium успешен: ${result.fighter1_name} vs ${result.fighter2_name} (живой: ${result.is_live ? 'ДА' : 'НЕТ'}, outcome: ${result.has_outcome ? 'ЕСТЬ' : 'НЕТ'})`);
+    console.log(`   📸 Изображения: ${result.fighter1_image ? '✅' : '❌'} / ${result.fighter2_image ? '✅' : '❌'}`);
+    console.log(`   🏷️ Имена: ${result.fighter1_name ? '✅' : '❌'} / ${result.fighter2_name ? '✅' : '❌'}`);
     
     return result;
   }
