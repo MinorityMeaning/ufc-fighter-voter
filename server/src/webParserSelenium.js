@@ -77,7 +77,6 @@ class WebParserSelenium {
         // Очищаем временную папку при ошибке
         if (this.userDataDir) {
           try {
-            const fs = await import('fs');
             if (fs.existsSync(this.userDataDir)) {
               fs.rmSync(this.userDataDir, { recursive: true, force: true });
             }
@@ -92,7 +91,6 @@ class WebParserSelenium {
     }
     return this.driver;
   }
-  }
 
   // Закрытие драйвера
   async closeDriver() {
@@ -104,7 +102,6 @@ class WebParserSelenium {
     // Очищаем временную папку Chrome
     if (this.userDataDir) {
       try {
-        const fs = await import('fs');
         if (fs.existsSync(this.userDataDir)) {
           fs.rmSync(this.userDataDir, { recursive: true, force: true });
           console.log(`🧹 Очищена временная папка Chrome: ${this.userDataDir}`);
