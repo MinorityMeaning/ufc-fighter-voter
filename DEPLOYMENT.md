@@ -1,161 +1,68 @@
-# Инструкция по деплою UFC Voting Widget
+# Инструкция по развертыванию на сервере
 
-## Подготовка к деплою
+## Подготовка сервера
 
-### 1. Настройка переменных окружения
+### 1. Установка зависимостей
 
-**Сервер (server/.env):**
 ```bash
-# Основные настройки
-NODE_ENV=production
-PORT=3001
+# Обновляем систему
+sudo apt update && sudo apt upgrade -y
 
-# Домены (ОБЯЗАТЕЛЬНО замените на ваши!)
-CLIENT_URL=https://yourdomain.com
-ADMIN_URL=https://admin.yourdomain.com
-API_HOST=api.yourdomain.com
+# Устанавливаем Node.js 18+
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
 
-# WebSocket настройки
-MAX_CONNECTIONS=50000
+# Устанавливаем Chrome для Selenium
+sudo apt-get install -y wget gnupg
+wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+sudo apt-get update
+sudo apt-get install -y google-chrome-stable
 
-# API настройки
-RATE_LIMIT=1000
-API_TIMEOUT=30000
+# Устанавливаем nginx
+sudo apt-get install -y nginx
 
-# Парсер настройки
-PARSER_INTERVAL=30000
+# Устанавливаем certbot для SSL
+sudo apt-get install -y certbot python3-certbot-nginx
 ```
 
-**Клиент (client/.env):**
-```bash
-# API URL для production
-VITE_API_URL=https://api.yourdomain.com/api
+### 2. Настройка nginx
 
-# WebSocket URL для production  
-VITE_SOCKET_URL=https://api.yourdomain.com
-```
-
-### 2. Сборка проекта
+Создайте файл конфигурации nginx:
 
 ```bash
-# Установка зависимостей
-npm run install:all
-
-# Сборка клиента
-npm run build
-```
-
-## Деплой на сервер
-
-### Вариант A: Простой деплой с PM2
-
-1. **Загрузите файлы на сервер:**
-```bash
-scp -r ./fighter-voter user@your-server:/var/www/
-```
-
-2. **Подключитесь к серверу:**
-```bash
-ssh user@your-server
-cd /var/www/fighter-voter
-```
-
-3. **Установите зависимости:**
-```bash
-npm run install:all
-```
-
-4. **Настройте переменные окружения:**
-```bash
-cd server && cp env.example .env
-# Отредактируйте .env с вашими доменами
-cd ../client && cp env.example .env
-# Отредактируйте .env с вашими доменами
-cd ..
-```
-
-5. **Соберите клиент:**
-```bash
-npm run build
-```
-
-6. **Создайте PM2 конфигурацию:**
-```bash
-# Создайте файл ecosystem.config.js
-cat > ecosystem.config.js << 'EOF'
-module.exports = {
-  apps: [{
-    name: 'ufc-voting-server',
-    script: './server/src/serverMemory.js',
-    cwd: '/var/www/fighter-voter',
-    instances: 1,
-    autorestart: true,
-    watch: false,
-    max_memory_restart: '1G',
-    env: {
-      NODE_ENV: 'production',
-      PORT: 3001
-    }
-  }]
-};
-EOF
-```
-
-7. **Запустите приложение:**
-```bash
-pm2 start ecosystem.config.js
-pm2 save
-pm2 startup
-```
-
-### Вариант B: Деплой с Nginx
-
-1. **Выполните шаги 1-7 из Варианта A**
-
-2. **Установите Nginx:**
-```bash
-sudo apt update
-sudo apt install nginx
-```
-
-3. **Создайте конфигурацию Nginx:**
-```bash
-sudo nano /etc/nginx/sites-available/ufc-voting
+sudo nano /etc/nginx/sites-available/voter.mardaunt.ru
 ```
 
 Содержимое файла:
+
 ```nginx
+# HTTP server block для поддомена voter (редирект на HTTPS)
 server {
     listen 80;
-    server_name yourdomain.com;
-
-    # Редирект на HTTPS
-    return 301 https://$server_name$request_uri;
+    server_name voter.mardaunt.ru;
+    
+    # Перенаправление с HTTP на HTTPS
+    return 301 https://$host$request_uri;
 }
 
+# HTTPS server block для поддомена voter
 server {
-    listen 443 ssl http2;
-    server_name yourdomain.com;
-
-    # SSL сертификаты (настройте свои)
-    ssl_certificate /path/to/your/certificate.crt;
-    ssl_certificate_key /path/to/your/private.key;
-
-    # Статические файлы клиента
+    listen 443 ssl;
+    server_name voter.mardaunt.ru;
+    ssl_certificate /etc/letsencrypt/live/mardaunt.ru/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/mardaunt.ru/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+    
     location / {
-        root /var/www/fighter-voter/client/dist;
+        root /var/www/html/fighter-voter/client/dist;
         try_files $uri $uri/ /index.html;
-        
-        # Кэширование статических файлов
-        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
-            expires 1y;
-            add_header Cache-Control "public, immutable";
-        }
+        index index.html;
     }
-
-    # API проксирование
+    
     location /api/ {
-        proxy_pass http://localhost:3001;
+        proxy_pass http://localhost:3001/api/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -163,12 +70,10 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
     }
-
-    # WebSocket проксирование
+    
     location /socket.io/ {
-        proxy_pass http://localhost:3001;
+        proxy_pass http://localhost:3001/socket.io/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -180,199 +85,283 @@ server {
 }
 ```
 
-4. **Активируйте конфигурацию:**
+Активируйте конфигурацию:
+
 ```bash
-sudo ln -s /etc/nginx/sites-available/ufc-voting /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/voter.mardaunt.ru /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-5. **Настройте SSL (Let's Encrypt):**
+### 3. Получение SSL сертификата
+
 ```bash
-sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d yourdomain.com
+sudo certbot --nginx -d voter.mardaunt.ru
 ```
 
-### Вариант C: Docker деплой
+## Развертывание приложения
 
-1. **Создайте Dockerfile:**
-```dockerfile
-# Dockerfile
-FROM node:18-alpine
+### 1. Клонирование и установка
 
-WORKDIR /app
-
-# Копируем package.json файлы
-COPY package*.json ./
-COPY server/package*.json ./server/
-COPY client/package*.json ./client/
+```bash
+# Клонируем репозиторий
+cd /var/www/html
+sudo git clone <your-repo-url> fighter-voter
+cd fighter-voter
 
 # Устанавливаем зависимости
-RUN npm run install:all
-
-# Копируем исходный код
-COPY . .
-
-# Собираем клиент
-RUN npm run build
-
-# Открываем порт
-EXPOSE 3001
-
-# Запускаем сервер
-CMD ["npm", "start"]
+npm run install:all
 ```
 
-2. **Создайте docker-compose.yml:**
-```yaml
-version: '3.8'
-services:
-  ufc-voting:
-    build: .
-    ports:
-      - "3001:3001"
-    environment:
-      - NODE_ENV=production
-      - PORT=3001
-      - CLIENT_URL=https://yourdomain.com
-      - ADMIN_URL=https://admin.yourdomain.com
-      - API_HOST=api.yourdomain.com
-    restart: unless-stopped
-```
+### 2. Настройка переменных окружения
 
-3. **Запустите:**
 ```bash
-docker-compose up -d
+# Настраиваем сервер
+cd server
+cp env.example .env
+nano .env
 ```
 
-## Проверка деплоя
+Содержимое `.env`:
 
-### 1. Проверка сервера
-```bash
-# Проверка статуса PM2
-pm2 status
-
-# Просмотр логов
-pm2 logs ufc-voting-server
-
-# Проверка API
-curl https://yourdomain.com/api/health
+```env
+NODE_ENV=production
+PORT=3001
+CLIENT_URL=https://voter.mardaunt.ru
+MAX_CONNECTIONS=50000
+RATE_LIMIT=1000
+API_TIMEOUT=30000
+PARSER_INTERVAL=30000
+API_HOST=localhost
 ```
 
-### 2. Проверка клиента
-- Откройте https://yourdomain.com в браузере
-- Проверьте админ панель: https://yourdomain.com/#admin-ufc-secret-panel-2024
+### 3. Сборка клиента
 
-### 3. Проверка WebSocket
 ```bash
-# В консоли браузера
-const socket = io('https://yourdomain.com');
-socket.on('connect', () => console.log('Connected!'));
+# Собираем клиент для продакшена
+cd /var/www/html/fighter-voter
+npm run build
+```
+
+### 4. Настройка systemd сервиса
+
+Создайте файл сервиса:
+
+```bash
+sudo nano /etc/systemd/system/ufc-voter.service
+```
+
+Содержимое:
+
+```ini
+[Unit]
+Description=UFC Voting Widget Server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/html/fighter-voter/server
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node src/serverMemory.js
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Активируйте сервис:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable ufc-voter
+sudo systemctl start ufc-voter
+```
+
+### 5. Настройка прав доступа
+
+```bash
+# Устанавливаем правильные права
+sudo chown -R www-data:www-data /var/www/html/fighter-voter
+sudo chmod -R 755 /var/www/html/fighter-voter
+```
+
+## Проверка работы
+
+### 1. Проверка сервиса
+
+```bash
+# Проверяем статус сервиса
+sudo systemctl status ufc-voter
+
+# Смотрим логи
+sudo journalctl -u ufc-voter -f
+```
+
+### 2. Проверка nginx
+
+```bash
+# Проверяем статус nginx
+sudo systemctl status nginx
+
+# Тестируем конфигурацию
+sudo nginx -t
+```
+
+### 3. Проверка SSL
+
+```bash
+# Проверяем SSL сертификат
+sudo certbot certificates
 ```
 
 ## Обновление приложения
 
-### 1. Остановка
+### 1. Остановка сервиса
+
 ```bash
-pm2 stop ufc-voting-server
+sudo systemctl stop ufc-voter
 ```
 
 ### 2. Обновление кода
+
 ```bash
+cd /var/www/html/fighter-voter
 git pull origin main
 npm run install:all
 npm run build
 ```
 
-### 3. Обновление переменных окружения (если нужно)
-```bash
-# Отредактируйте .env файлы
-nano server/.env
-nano client/.env
-```
+### 3. Запуск сервиса
 
-### 4. Запуск
 ```bash
-pm2 start ufc-voting-server
+sudo systemctl start ufc-voter
+sudo systemctl status ufc-voter
 ```
 
 ## Мониторинг
 
-### 1. Логи
-```bash
-# PM2 логи
-pm2 logs ufc-voting-server
+### 1. Логи сервиса
 
-# Nginx логи
+```bash
+# Просмотр логов в реальном времени
+sudo journalctl -u ufc-voter -f
+
+# Просмотр последних 100 строк
+sudo journalctl -u ufc-voter -n 100
+```
+
+### 2. Логи nginx
+
+```bash
+# Логи доступа
 sudo tail -f /var/log/nginx/access.log
+
+# Логи ошибок
 sudo tail -f /var/log/nginx/error.log
 ```
 
-### 2. Мониторинг ресурсов
-```bash
-pm2 monit
-htop
-```
+### 3. Мониторинг ресурсов
 
-### 3. Статистика API
 ```bash
-curl https://yourdomain.com/api/stats
+# Использование памяти и CPU
+htop
+
+# Использование диска
+df -h
+
+# Сетевые соединения
+netstat -tulpn | grep :3001
 ```
 
 ## Устранение неполадок
 
-### 1. Сервер не запускается
+### 1. Сервис не запускается
+
 ```bash
-# Проверьте логи
-pm2 logs ufc-voting-server
+# Проверяем логи
+sudo journalctl -u ufc-voter -n 50
 
-# Проверьте переменные окружения
-cat server/.env
+# Проверяем права доступа
+ls -la /var/www/html/fighter-voter/server/
 
-# Проверьте порт
-netstat -tlnp | grep 3001
+# Проверяем зависимости
+cd /var/www/html/fighter-voter/server
+npm list
 ```
 
-### 2. WebSocket не работает
-```bash
-# Проверьте CORS настройки
-curl -H "Origin: https://yourdomain.com" https://yourdomain.com/api/health
+### 2. Проблемы с nginx
 
-# Проверьте Nginx конфигурацию
+```bash
+# Проверяем конфигурацию
 sudo nginx -t
+
+# Перезапускаем nginx
+sudo systemctl restart nginx
+
+# Проверяем логи
+sudo tail -f /var/log/nginx/error.log
 ```
 
-### 3. Клиент не загружается
-```bash
-# Проверьте сборку
-ls -la client/dist/
+### 3. Проблемы с SSL
 
-# Проверьте Nginx конфигурацию
-sudo nginx -t
+```bash
+# Обновляем сертификат
+sudo certbot renew
+
+# Проверяем статус
+sudo certbot certificates
 ```
 
 ## Безопасность
 
-### 1. Файрвол
+### 1. Firewall
+
 ```bash
+# Открываем только необходимые порты
+sudo ufw allow 22
 sudo ufw allow 80
 sudo ufw allow 443
-sudo ufw allow 22
 sudo ufw enable
 ```
 
-### 2. SSL сертификаты
+### 2. Регулярные обновления
+
 ```bash
-# Автоматическое обновление
-sudo crontab -e
-# Добавьте: 0 12 * * * /usr/bin/certbot renew --quiet
+# Автоматические обновления безопасности
+sudo apt-get install unattended-upgrades
+sudo dpkg-reconfigure -plow unattended-upgrades
 ```
 
-### 3. Регулярные обновления
-```bash
-# Обновление системы
-sudo apt update && sudo apt upgrade
+### 3. Резервное копирование
 
-# Обновление PM2
-pm2 update
+```bash
+# Создаем скрипт для бэкапа
+sudo nano /usr/local/bin/backup-ufc-voter.sh
+```
+
+Содержимое скрипта:
+
+```bash
+#!/bin/bash
+BACKUP_DIR="/var/backups/ufc-voter"
+DATE=$(date +%Y%m%d_%H%M%S)
+
+mkdir -p $BACKUP_DIR
+tar -czf $BACKUP_DIR/ufc-voter-$DATE.tar.gz /var/www/html/fighter-voter
+find $BACKUP_DIR -name "*.tar.gz" -mtime +7 -delete
+```
+
+Делаем скрипт исполняемым:
+
+```bash
+sudo chmod +x /usr/local/bin/backup-ufc-voter.sh
+```
+
+Добавляем в cron:
+
+```bash
+sudo crontab -e
+# Добавляем строку: 0 2 * * * /usr/local/bin/backup-ufc-voter.sh
 ``` 

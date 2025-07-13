@@ -66,12 +66,18 @@ class WebParser {
       // Загружаем страницу
       const response = await axios.get(targetUrl, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+          'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8',
           'Accept-Encoding': 'gzip, deflate, br',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
           'Connection': 'keep-alive',
           'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
         },
         timeout: 30000,
       });
@@ -95,7 +101,7 @@ class WebParser {
         event_name: this.extractText($, selectors.eventName),
         event_time: this.extractText($, selectors.eventTime),
         description: this.extractText($, selectors.description),
-        is_live: this.checkIsLive($, selectors.liveIndicator),
+        is_live: this.checkIsLive($('body'), selectors.liveIndicator),
         parsedAt: new Date().toISOString(),
         sourceUrl: targetUrl
       };
@@ -129,19 +135,40 @@ class WebParser {
     
     console.log(`🔍 Найдено ${fightElements.length} боев для парсинга`);
     
+    // Сначала собираем все элементы .c-listing-fight в список
+    const fightElementList = [];
     fightElements.each((index, element) => {
-      const $fight = $(element);
-      
+      const $element = $(element);
+      fightElementList.push($element);
+      console.log(`📋 Элемент #${index + 1}: ${$element.attr('class') || 'no-class'}`);
+    });
+    
+    console.log(`📋 Собрано ${fightElementList.length} элементов боев`);
+    
+    // Теперь извлекаем информацию из каждого элемента
+    fightElementList.forEach(($fight, index) => {
       try {
+        const fighter1Name = this.extractTextFromElement($fight, selectors.fighter1Name);
+        const fighter2Name = this.extractTextFromElement($fight, selectors.fighter2Name);
+        
+        console.log(`🔍 Извлекаем бой #${index + 1}: ${fighter1Name} vs ${fighter2Name}`);
+        
+        // Проверяем наличие элемента с результатом боя
+        const outcomeElement = $fight.find('.c-listing-fight__outcome--win');
+        const hasOutcome = outcomeElement.length > 0;
+        
+        console.log(`🔍 Бой #${index + 1}: ${fighter1Name} vs ${fighter2Name} - outcome элемент: ${hasOutcome ? 'ЕСТЬ' : 'НЕТ'}`);
+        
         const fight = {
-          fighter1_name: this.extractTextFromElement($fight, selectors.fighter1Name),
-          fighter2_name: this.extractTextFromElement($fight, selectors.fighter2Name),
+          fighter1_name: fighter1Name,
+          fighter2_name: fighter2Name,
           fighter1_image: this.extractAttributeFromElement($fight, selectors.fighter1Image, 'src'),
           fighter2_image: this.extractAttributeFromElement($fight, selectors.fighter2Image, 'src'),
           event_name: this.extractText($, selectors.eventName),
           event_time: this.extractText($, selectors.eventTime),
           description: this.extractTextFromElement($fight, selectors.description),
-          is_live: this.checkIsLiveFromElement($fight, selectors.liveIndicator),
+          is_live: this.checkIsLive($fight, selectors.liveIndicator),
+          has_outcome: hasOutcome,
           parsedAt: new Date().toISOString(),
           sourceUrl: targetUrl
         };
@@ -156,27 +183,58 @@ class WebParser {
           fight.id = this.generateFightId(fight.fighter1_name, fight.fighter2_name);
           
           fights.push(fight);
-          console.log(`✅ Бой #${index + 1}: ${fight.fighter1_name} vs ${fight.fighter2_name} (Live: ${fight.is_live})`);
+          console.log(`✅ Бой #${index + 1}: ${fight.fighter1_name} vs ${fight.fighter2_name} (живой: ${fight.is_live ? 'ДА' : 'НЕТ'})`);
+        } else {
+          console.log(`❌ Бой #${index + 1}: Не удалось извлечь имена (${fighter1Name} vs ${fighter2Name})`);
         }
       } catch (error) {
         console.warn(`⚠️ Ошибка парсинга боя #${index + 1}: ${error.message}`);
       }
     });
     
-    // Ищем первый живой бой
-    const liveFight = fights.find(fight => fight.is_live);
+    console.log(`📊 Извлечено ${fights.length} боев из ${fightElementList.length} элементов`);
     
-    if (liveFight) {
-      console.log(`🔴 Найден живой бой: ${liveFight.fighter1_name} vs ${liveFight.fighter2_name}`);
-      this.lastParseResult = liveFight;
-      return liveFight;
+    // Проверяем live статус на уровне всей страницы
+    const allLiveBanners = $('.c-listing-fight__banner--live');
+    const visibleLiveBanners = $('.c-listing-fight__banner--live:not(.hidden)');
+    const hasGlobalLive = visibleLiveBanners.length > 0;
+    
+    console.log(`🔍 Все live banner'ы: ${allLiveBanners.length}`);
+    console.log(`🔍 Видимые live banner'ы: ${visibleLiveBanners.length}`);
+    console.log(`🔍 Глобальный live banner: ${hasGlobalLive ? 'НАЙДЕН' : 'НЕ НАЙДЕН'}`);
+    
+    if (allLiveBanners.length > 0) {
+      console.log(`🔍 Первый live banner:`, allLiveBanners.first().toString());
     }
     
-    // Если нет живых боев, возвращаем первый найденный бой
+    if (hasGlobalLive) {
+      console.log(`🔍 Видимый live banner:`, visibleLiveBanners.first().toString());
+    }
+    
+    // Попробуем найти другие возможные live индикаторы
+    const otherLiveIndicators = $('[class*="live"], [class*="Live"], [class*="LIVE"]');
+    console.log(`🔍 Другие live индикаторы: ${otherLiveIndicators.length}`);
+    if (otherLiveIndicators.length > 0) {
+      otherLiveIndicators.each((i, el) => {
+        const $el = $(el);
+        console.log(`🔍 Live индикатор ${i+1}:`, $el.toString());
+      });
+    }
+    
+    // Возвращаем первый бой (живой или нет)
     if (fights.length > 0) {
-      console.log(`📄 Живых боев не найдено, возвращаем первый: ${fights[0].fighter1_name} vs ${fights[0].fighter2_name}`);
-      this.lastParseResult = fights[0];
-      return fights[0];
+      const selectedFight = fights[0];
+      
+      // Если есть глобальный live banner, помечаем бой как live
+      if (hasGlobalLive) {
+        selectedFight.is_live = true;
+        console.log(`📄 Возвращаем бой: ${selectedFight.fighter1_name} vs ${selectedFight.fighter2_name} (живой: ДА - глобальный индикатор)`);
+      } else {
+        console.log(`📄 Возвращаем бой: ${selectedFight.fighter1_name} vs ${selectedFight.fighter2_name} (живой: НЕТ)`);
+      }
+      
+      this.lastParseResult = selectedFight;
+      return selectedFight;
     }
     
     throw new Error('Не удалось найти ни одного боя на странице');
@@ -211,15 +269,67 @@ class WebParser {
   }
 
   // Проверка, идет ли бой в прямом эфире
-  checkIsLive($, selector) {
+  checkIsLive($element, selector) {
     if (!selector) return false;
     
     try {
-      const element = $(selector).first();
-      // Проверяем, есть ли элемент и НЕ содержит ли он класс "hidden"
-      return element.length > 0 && !element.hasClass('hidden');
+      // Ищем live banner в элементе боя
+      const liveBanner = $element.find(selector);
+      
+      console.log(`🔍 Live banner поиск: селектор="${selector}", найдено=${liveBanner.length}`);
+      
+      if (liveBanner.length > 0) {
+        const hasHidden = liveBanner.hasClass('hidden');
+        const textContent = liveBanner.text().trim();
+        const allClasses = liveBanner.attr('class') || '';
+        
+        console.log(`🔍 Live banner найден:`);
+        console.log(`   - Классы: "${allClasses}"`);
+        console.log(`   - Hidden: ${hasHidden}`);
+        console.log(`   - Текст: "${textContent}"`);
+        
+        // Если элемент НЕ скрыт и содержит live текст
+        if (!hasHidden && (textContent.toLowerCase().includes('live') || textContent.toLowerCase().includes('прямой эфир'))) {
+          console.log(`   - Результат: LIVE (видимый banner с live текстом)`);
+          return true;
+        }
+      }
+      
+      // Если не нашли видимый banner в элементе, проверяем глобальные live индикаторы
+      // Нужно искать на уровне всей страницы, а не внутри элемента боя
+      let globalLiveIndicators = $element.find('.c-listing-ticker-fightcard__live');
+      
+      // Если не нашли в элементе боя, ищем на уровне всей страницы
+      if (globalLiveIndicators.length === 0) {
+        const $body = $element.closest('body');
+        if ($body.length > 0) {
+          globalLiveIndicators = $body.find('.c-listing-ticker-fightcard__live');
+        }
+      }
+      
+      console.log(`🔍 Глобальные live индикаторы: найдено=${globalLiveIndicators.length}`);
+      
+      if (globalLiveIndicators.length > 0) {
+        // Проверяем первый индикатор
+        const firstIndicator = globalLiveIndicators.first();
+        const indicatorText = firstIndicator.text().trim();
+        const indicatorClasses = firstIndicator.attr('class') || '';
+        
+        console.log(`🔍 Глобальный live индикатор:`);
+        console.log(`   - Классы: "${indicatorClasses}"`);
+        console.log(`   - Текст: "${indicatorText}"`);
+        
+        // Если есть глобальный live индикатор, считаем что есть live бой
+        if (indicatorText.toLowerCase().includes('live')) {
+          console.log(`   - Результат: LIVE (найден глобальный live индикатор)`);
+          return true;
+        }
+      }
+      
+      console.log(`🔍 Live статус: НЕ live`);
+      return false;
     } catch (error) {
-      console.warn(`⚠️ Ошибка проверки live статуса "${selector}": ${error.message}`);
+      console.warn(`⚠️ Ошибка проверки live статуса: ${error.message}`);
       return false;
     }
   }
@@ -252,19 +362,7 @@ class WebParser {
     }
   }
 
-  // Проверка live статуса из конкретного элемента
-  checkIsLiveFromElement($element, selector) {
-    if (!selector) return false;
-    
-    try {
-      const element = $element.find(selector).first();
-      // Проверяем, есть ли элемент и НЕ содержит ли он класс "hidden"
-      return element.length > 0 && !element.hasClass('hidden');
-    } catch (error) {
-      console.warn(`⚠️ Ошибка проверки live статуса "${selector}": ${error.message}`);
-      return false;
-    }
-  }
+
 
   // Нормализация URL изображения
   normalizeImageUrl(imageUrl, baseUrl) {
@@ -287,10 +385,10 @@ class WebParser {
 
   // Генерация ID для боя
   generateFightId(fighter1, fighter2) {
-    const timestamp = Date.now();
+    // Убираем timestamp, используем только имена бойцов
     const names = [fighter1, fighter2].sort().join('-');
     const hash = Buffer.from(names).toString('base64').replace(/[^a-zA-Z0-9]/g, '');
-    return `parsed-${hash.substring(0, 8)}-${timestamp}`;
+    return `parsed-${hash.substring(0, 8)}`;
   }
 
   // Тестирование парсера с настройками

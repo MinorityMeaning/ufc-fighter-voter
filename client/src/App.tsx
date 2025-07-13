@@ -31,6 +31,14 @@ function App() {
   const [currentFight, setCurrentFight] = useState<Fight | null>(null);
   const [voteStats, setVoteStats] = useState<VoteStats>({ fighter1: 0, fighter2: 0, total: 0 });
 
+  // Генерируем user_session при загрузке
+  useEffect(() => {
+    if (!localStorage.getItem('ufc_user_session')) {
+      const session = 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+      localStorage.setItem('ufc_user_session', session);
+    }
+  }, []);
+
   // Check for admin access
   useEffect(() => {
     if (window.location.hash === ADMIN_SECRET_HASH) {
@@ -38,10 +46,14 @@ function App() {
     }
   }, []);
 
-  // Socket connection - используем прокси через Vite
+  // Socket connection
   useEffect(() => {
-    // Используем относительный путь для прокси через Vite
-    const newSocket = io('/', {
+    // В development используем прокси Vite, в production - относительный путь
+    const socketUrl = import.meta.env.MODE === 'development' 
+      ? '/' 
+      : window.location.origin;
+    
+    const newSocket = io(socketUrl, {
       path: '/socket.io/',
       transports: ['websocket', 'polling']
     });

@@ -10,7 +10,7 @@
     "eventName": "h1",
     "eventTime": ".c-hero__timestamp",
     "description": ".c-listing-fight__class-text",
-    "liveIndicator": ".c-listing-fight__banner--live"
+    "liveIndicator": ".c-listing-fight__banner--live, .c-listing-ticker-fightcard__live"
   },
   "isActive": true,
   "testResult": {

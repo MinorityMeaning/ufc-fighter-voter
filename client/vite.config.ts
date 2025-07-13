@@ -1,11 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // Уберите base: '/voter/' - теперь используем отдельный домен
   server: {
-    host: '0.0.0.0',
     port: 5173,
     proxy: {
       '/api': {
@@ -16,11 +15,7 @@ export default defineConfig({
         target: 'http://localhost:3001',
         changeOrigin: true,
         ws: true,
-      },
-    },
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: true,
-  },
+      }
+    }
+  }
 }) 

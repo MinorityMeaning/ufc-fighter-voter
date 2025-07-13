@@ -202,7 +202,7 @@ io.on('connection', (socket) => {
       const voteStats = memoryStorage.getVoteStats();
       const currentState = memoryStorage.getCurrentState();
       
-      console.log(`✅ Голос добавлен: ${voteStats.fighter1} vs ${voteStats.fighter2} (всего: ${voteStats.total})`);
+      console.log(`✅ Голос добавлен: ${currentState.fight?.fighter1_name} vs ${currentState.fight?.fighter2_name} (всего: ${voteStats.total_votes})`);
       
       // Отправляем обновление всем клиентам
       io.emit('vote_added', {
@@ -343,7 +343,7 @@ async function startServer() {
       console.log(`💾 In-memory storage инициализирован`);
       console.log(`🔄 Backup каждые 5 минут`);
       console.log(`🔍 Проверка новых боев каждые 10 минут`);
-      console.log(`🌐 Доступ из локальной сети: http://192.168.0.14:${PORT}`);
+      console.log(`🌐 Доступ из локальной сети: http://localhost:${PORT}`);
     });
     
   } catch (error) {

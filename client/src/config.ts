@@ -5,15 +5,11 @@ export const config = {
   
   // API настройки
   api: {
-    // В development используем прокси Vite, в production - прямой URL
-    baseURL: import.meta.env.MODE === 'development' 
-      ? '/api' 
-      : import.meta.env.VITE_API_URL || 'https://api.yourdomain.com/api',
+    // Автоматическое определение URL в зависимости от хоста
+    baseURL: getApiBaseURL(),
     
-    // Прямой URL для WebSocket (не через прокси)
-    socketURL: import.meta.env.MODE === 'development'
-      ? getDevelopmentSocketURL()
-      : import.meta.env.VITE_SOCKET_URL || 'https://api.yourdomain.com',
+    // WebSocket URL
+    socketURL: getSocketBaseURL(),
     
     timeout: 30000,
     retries: 3
@@ -37,16 +33,39 @@ export const config = {
   }
 };
 
-// Функция для определения URL WebSocket в development
-function getDevelopmentSocketURL(): string {
+// Функция для определения URL API
+function getApiBaseURL(): string {
   const hostname = window.location.hostname;
   
-  // Если localhost, используем localhost для API
+  // Если localhost или 127.0.0.1, используем localhost для API
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:3001/api';
+  }
+  
+  // Если voter.mardaunt.ru, используем прокси через nginx
+  if (hostname === 'voter.mardaunt.ru') {
+    return '/api';
+  }
+  
+  // В остальных случаях используем текущий хост
+  return `http://${hostname}:3001/api`;
+}
+
+// Функция для определения URL WebSocket
+function getSocketBaseURL(): string {
+  const hostname = window.location.hostname;
+  
+  // Если localhost или 127.0.0.1, используем localhost для WebSocket
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://localhost:3001';
   }
   
-  // Если IP адрес, используем тот же IP
+  // Если voter.mardaunt.ru, используем относительный путь для прокси
+  if (hostname === 'voter.mardaunt.ru') {
+    return '/';
+  }
+  
+  // В остальных случаях используем текущий хост
   return `http://${hostname}:3001`;
 }
 

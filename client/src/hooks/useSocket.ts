@@ -6,9 +6,14 @@ import type { UseSocketReturn } from '../types';
 const getSocketURL = () => {
   const hostname = window.location.hostname;
   
-  // Если localhost или IP адрес, используем их
+  // Если localhost или 127.0.0.1, используем localhost для WebSocket
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://192.168.0.14:3001'; // Используем ваш локальный IP
+    return 'http://localhost:3001';
+  }
+  
+  // Если voter.mardaunt.ru, используем относительный путь для прокси
+  if (hostname === 'voter.mardaunt.ru') {
+    return '/'; // Используем относительный путь для прокси через nginx
   }
   
   // В остальных случаях используем текущий хост
@@ -29,6 +34,7 @@ export const useSocket = (): UseSocketReturn => {
 
     try {
       const socket = io(SOCKET_URL, {
+        path: '/socket.io/', // Добавляем путь для прокси
         transports: ['polling', 'websocket'], // Polling первым для мобильных
         reconnection: true,
         reconnectionAttempts: 10, // Больше попыток

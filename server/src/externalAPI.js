@@ -1,17 +1,15 @@
 // Модуль для получения данных о боях с внешних источников
 import { memoryStorage } from './memoryStorage.js';
 
-// Импорт веб-парсера
-import webParser from './webParser.js';
+// Импорт Selenium веб-парсера
+import webParser from './webParserSelenium.js';
 
 class ExternalFightAPI {
   constructor() {
-    // Генерируем случайный интервал от 7 до 9 минут
-    const randomMinutes = Math.floor(Math.random() * 3) + 7; // 7, 8, или 9 минут
-    const randomSeconds = Math.floor(Math.random() * 60); // случайные секунды для большей рандомности
-    
+        // Настройки для быстрых проверок
     this.config = {
-      checkInterval: (randomMinutes * 60 + randomSeconds) * 1000, // случайное время от 7 до 9 минут
+      quickCheckInterval: 60 * 1000, // Быстрая проверка каждую минуту
+      fullCheckInterval: (Math.floor(Math.random() * 11) + 30) * 60 * 1000, // Полная проверка каждые 30-40 минут
       apiSources: [
         {
           name: 'UFC Official API',
@@ -43,17 +41,49 @@ class ExternalFightAPI {
 
   // Запустить периодическую проверку новых боев
   startMonitoring() {
-    const minutes = Math.floor(this.config.checkInterval / 60000);
-    const seconds = Math.floor((this.config.checkInterval % 60000) / 1000);
-    console.log(`🔍 Запуск мониторинга боев каждые ${minutes} минут ${seconds} секунд`);
+    const fullCheckMinutes = Math.floor(this.config.fullCheckInterval / 60000);
+    console.log(`🔍 Запуск мониторинга боев:`);
+    console.log(`   - Быстрая проверка каждую минуту`);
+    console.log(`   - Полная проверка каждые ${fullCheckMinutes} минут`);
     
-    // Сразу проверяем при запуске
+    // Сразу делаем полную проверку при запуске
     this.checkForNewFights();
     
-    // Затем периодически
+    // Быстрые проверки каждую минуту
+    setInterval(() => {
+      this.quickCheckForNewFights();
+    }, this.config.quickCheckInterval);
+    
+    // Полные проверки каждые 10 минут
     setInterval(() => {
       this.checkForNewFights();
-    }, this.config.checkInterval);
+    }, this.config.fullCheckInterval);
+  }
+
+  // Быстрая проверка новых боев (без перезагрузки страницы)
+  async quickCheckForNewFights() {
+    if (this.isChecking) {
+      return; // Пропускаем, если уже идет проверка
+    }
+
+    try {
+      const status = webParser.getStatus();
+      
+      if (!status.isConfigured || !status.isActive) {
+        return; // Парсер не готов
+      }
+
+      // Быстрая проверка через Selenium
+      const quickResult = await webParser.quickCheck();
+      
+      if (quickResult.liveStatus) {
+        console.log('🔥 Обнаружен LIVE бой! Запускаем полную проверку...');
+        await this.checkForNewFights();
+      }
+
+    } catch (error) {
+      console.error('❌ Ошибка быстрой проверки:', error);
+    }
   }
 
   // Основная функция проверки новых боев
@@ -283,14 +313,37 @@ class ExternalFightAPI {
   // Получить статус мониторинга
   getStatus() {
     const source = this.config.apiSources[this.config.currentSource];
+    
+    // Безопасная обработка дат
+    let nextCheck = 'скоро';
+    let checkInterval = 'неизвестно';
+    
+    if (this.lastCheck) {
+      try {
+        const lastCheckDate = new Date(this.lastCheck);
+        if (!isNaN(lastCheckDate.getTime())) {
+          const nextCheckDate = new Date(lastCheckDate.getTime() + this.config.fullCheckInterval);
+          nextCheck = nextCheckDate.toISOString();
+        }
+      } catch (error) {
+        console.warn('⚠️ Ошибка обработки даты lastCheck:', error);
+      }
+    }
+    
+    try {
+      const fullCheckMinutes = Math.floor(this.config.fullCheckInterval / 60000);
+      const quickCheckSeconds = Math.floor(this.config.quickCheckInterval / 1000);
+      checkInterval = `Быстрая: ${quickCheckSeconds}с, Полная: ${fullCheckMinutes}м`;
+    } catch (error) {
+      console.warn('⚠️ Ошибка расчета интервалов:', error);
+    }
+    
     return {
       isActive: true,
       currentSource: source.name,
       lastCheck: this.lastCheck,
-      nextCheck: this.lastCheck ? 
-        new Date(new Date(this.lastCheck).getTime() + this.config.checkInterval).toISOString() : 
-        'скоро',
-              checkInterval: Math.floor(this.config.checkInterval / 60000) + ' минут ' + Math.floor((this.config.checkInterval % 60000) / 1000) + ' секунд',
+      nextCheck: nextCheck,
+      checkInterval: checkInterval,
       isChecking: this.isChecking,
       isHealthy: true,
       totalChecks: this.lastCheck ? 1 : 0

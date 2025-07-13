@@ -8,12 +8,10 @@ export const config = {
   domains: {
     development: [
       'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      'http://192.168.0.14:5173' // Локальный IP для мобильных устройств
+      'http://127.0.0.1:5173'
     ],
     production: [
-      process.env.CLIENT_URL || 'https://yourdomain.com',
-      process.env.ADMIN_URL || 'https://admin.yourdomain.com'
+      'https://voter.mardaunt.ru'
     ]
   },
   

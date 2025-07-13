@@ -47,13 +47,18 @@ export interface MemoryAdminStats {
   };
 }
 
-// Автоматическое определение хоста для мобильных устройств
+// Автоматическое определение хоста для API
 function getAPIBaseURL(): string {
   const hostname = window.location.hostname;
   
-  // Если клиент работает на localhost или 127.0.0.1, используем IP адрес для мобильных устройств
+  // Если клиент работает на localhost или 127.0.0.1, используем localhost для API
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://192.168.0.14:3001/api';
+    return 'http://localhost:3001/api';
+  }
+  
+  // Если клиент работает на voter.mardaunt.ru, используем прокси через nginx
+  if (hostname === 'voter.mardaunt.ru') {
+    return '/api'; // Используем относительный путь для прокси
   }
   
   // Если клиент уже работает на IP адресе, используем тот же IP для API
