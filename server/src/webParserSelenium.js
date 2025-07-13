@@ -9,6 +9,7 @@ class WebParserSelenium {
     this.lastParseResult = null;
     this.configPath = path.join(process.cwd(), 'ufc-parser-config.json');
     this.driver = null;
+    this.userDataDir = null; // Сохраняем путь к временной папке
     
     // Автоматически загружаем конфигурацию при создании
     this.loadConfig().catch(error => {
@@ -30,40 +31,67 @@ class WebParserSelenium {
   // Инициализация драйвера
   async initDriver() {
     if (!this.driver) {
-      console.log('🌐 Запуск Chrome через Selenium...');
-      
-      // Настройки Chrome для обхода блокировок
-      const options = new chrome.Options();
-      options.addArguments('--headless'); // Запуск без GUI для серверов без видеокарты
-      options.addArguments('--no-sandbox');
-      options.addArguments('--disable-dev-shm-usage');
-      options.addArguments('--disable-blink-features=AutomationControlled');
-      options.addArguments('--disable-extensions');
-      options.addArguments('--disable-plugins');
-      options.addArguments('--disable-images'); // Ускоряем загрузку
-      options.addArguments('--disable-javascript-harmony-shipping');
-      options.addArguments('--disable-background-timer-throttling');
-      options.addArguments('--disable-backgrounding-occluded-windows');
-      options.addArguments('--disable-renderer-backgrounding');
-      options.addArguments('--disable-features=TranslateUI');
-      options.addArguments('--disable-ipc-flooding-protection');
-      
-      // Устанавливаем User-Agent как у реального браузера
-      options.addArguments('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-      
-      // Скрываем признаки автоматизации
-      options.setUserPreferences({
-        'profile.default_content_setting_values.notifications': 2,
-        'profile.default_content_settings.popups': 0,
-        'profile.managed_default_content_settings.images': 2
-      });
+      try {
+        console.log('🌐 Запуск Chrome через Selenium...');
+        
+        // Генерируем уникальную папку для пользовательских данных
+        this.userDataDir = `/tmp/chrome-ufc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Настройки Chrome для обхода блокировок
+        const options = new chrome.Options();
+        options.addArguments('--headless'); // Запуск без GUI для серверов без видеокарты
+        options.addArguments('--no-sandbox');
+        options.addArguments('--disable-dev-shm-usage');
+        options.addArguments('--disable-blink-features=AutomationControlled');
+        options.addArguments('--disable-extensions');
+        options.addArguments('--disable-plugins');
+        options.addArguments('--disable-images'); // Ускоряем загрузку
+        options.addArguments('--disable-javascript-harmony-shipping');
+        options.addArguments('--disable-background-timer-throttling');
+        options.addArguments('--disable-backgrounding-occluded-windows');
+        options.addArguments('--disable-renderer-backgrounding');
+        options.addArguments('--disable-features=TranslateUI');
+        options.addArguments('--disable-ipc-flooding-protection');
+        options.addArguments(`--user-data-dir=${this.userDataDir}`); // Уникальная папка для каждого экземпляра
+        options.addArguments('--no-first-run');
+        options.addArguments('--no-default-browser-check');
+        options.addArguments('--disable-default-apps');
+        
+        // Устанавливаем User-Agent как у реального браузера
+        options.addArguments('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+        
+        // Скрываем признаки автоматизации
+        options.setUserPreferences({
+          'profile.default_content_setting_values.notifications': 2,
+          'profile.default_content_settings.popups': 0,
+          'profile.managed_default_content_settings.images': 2
+        });
 
-      this.driver = await new Builder()
-        .forBrowser('chrome')
-        .setChromeOptions(options)
-        .build();
+        this.driver = await new Builder()
+          .forBrowser('chrome')
+          .setChromeOptions(options)
+          .build();
+      } catch (error) {
+        console.error(`❌ Ошибка инициализации Chrome драйвера: ${error.message}`);
+        
+        // Очищаем временную папку при ошибке
+        if (this.userDataDir) {
+          try {
+            const fs = await import('fs');
+            if (fs.existsSync(this.userDataDir)) {
+              fs.rmSync(this.userDataDir, { recursive: true, force: true });
+            }
+          } catch (cleanupError) {
+            console.warn(`⚠️ Не удалось очистить временную папку при ошибке: ${cleanupError.message}`);
+          }
+          this.userDataDir = null;
+        }
+        
+        throw error;
+      }
     }
     return this.driver;
+  }
   }
 
   // Закрытие драйвера
@@ -71,6 +99,20 @@ class WebParserSelenium {
     if (this.driver) {
       await this.driver.quit();
       this.driver = null;
+    }
+    
+    // Очищаем временную папку Chrome
+    if (this.userDataDir) {
+      try {
+        const fs = await import('fs');
+        if (fs.existsSync(this.userDataDir)) {
+          fs.rmSync(this.userDataDir, { recursive: true, force: true });
+          console.log(`🧹 Очищена временная папка Chrome: ${this.userDataDir}`);
+        }
+      } catch (error) {
+        console.warn(`⚠️ Не удалось очистить временную папку: ${error.message}`);
+      }
+      this.userDataDir = null;
     }
   }
 
