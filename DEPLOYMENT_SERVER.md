@@ -63,7 +63,7 @@ pm2 delete ufc-voiting-server
 
 # Запускаем новый процесс
 cd server
-pm2 start ecosystem.config.js --env production
+pm2 start ecosystem.config.cjs --env production
 
 # Сохраняем PM2 конфигурацию
 pm2 save
@@ -117,7 +117,7 @@ npm install
 cd server && npm install
 
 # Запускаем сервер
-pm2 start ecosystem.config.js --env production
+pm2 start ecosystem.config.cjs --env production
 ```
 
 ### Просмотр мониторинга
