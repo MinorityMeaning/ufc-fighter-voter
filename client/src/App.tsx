@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { VotingWidget } from './components/VotingWidget';
 import { AdminPanel } from './components/AdminPanel';
 import { io, Socket } from 'socket.io-client';

@@ -23,10 +23,11 @@
       "event_name": "UFC Fight Night",
       "event_time": null,
       "description": "Тяжелый вес -",
-      "is_live": false,
-      "parsedAt": "2025-07-12T16:04:11.817Z",
+      "is_live": true,
+      "has_outcome": true,
+      "parsedAt": "2025-07-13T14:52:18.532Z",
       "sourceUrl": "https://ufc.ru/event/ufc-fight-night-july-12-2025",
-      "id": "parsed-0JTQtdGA-1752336251817"
+      "id": "parsed-0JTQtdGA"
     },
     "message": "Парсер работает корректно",
     "extractedFields": {
@@ -37,8 +38,8 @@
       "event_name": true,
       "event_time": false,
       "description": true,
-      "is_live": false
+      "is_live": true
     }
   },
-  "lastTest": "2025-07-12T16:04:11.828Z"
+  "lastTest": "2025-07-13T14:52:18.559Z"
 }

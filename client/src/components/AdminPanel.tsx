@@ -643,7 +643,7 @@ export const AdminPanel: React.FC = () => {
   const handleRunParser = useCallback(async () => {
     setIsLoading(true);
     try {
-      const result = await memoryApi.runParser();
+      await memoryApi.runParser();
       toast.success('Парсер успешно выполнен');
       loadData(); // Перезагружаем данные
     } catch (error: any) {
