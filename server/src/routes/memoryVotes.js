@@ -3,9 +3,6 @@ import express from 'express';
 import { memoryStorage } from '../memoryStorage.js';
 import { v4 as uuidv4 } from 'uuid';
 
-// Импорт веб-парсера
-import webParser from '../webParser.js';
-
 const router = express.Router();
 
 // Функция для получения io из глобального контекста
@@ -333,8 +330,8 @@ router.post('/admin/force-check', async (req, res) => {
 // Получить конфигурацию парсера
 router.get('/admin/parser-config', (req, res) => {
   try {
-    const config = webParser.getConfig();
-    const status = webParser.getStatus();
+    const config = global.webParserSelenium.getConfig();
+    const status = global.webParserSelenium.getStatus();
     
     res.json({
       success: true,
@@ -351,28 +348,24 @@ router.get('/admin/parser-config', (req, res) => {
 router.post('/admin/parser-config', async (req, res) => {
   try {
     const config = req.body;
-    
-    // Валидация конфигурации
-    const validation = webParser.validateConfig(config);
-    if (!validation.isValid) {
-      return res.status(400).json({
-        error: 'Неверная конфигурация парсера',
-        details: validation.errors
-      });
-    }
-    
-    // Сохранение конфигурации
-    await webParser.setConfig(config);
-    
-    console.log(`🔧 Конфигурация парсера обновлена: ${config.name}`);
-    
+    // Валидация конфигурации (если есть в Selenium)
+    // const validation = webParserSelenium.validateConfig ? webParserSelenium.validateConfig(config) : { isValid: true };
+    // if (!validation.isValid) {
+    //   return res.status(400).json({
+    //     error: 'Неверная конфигурация парсера',
+    //     details: validation.errors
+    //   });
+    // }
+    // Сохраняем конфиг только в Selenium-парсер
+    await global.webParserSelenium.setConfig(config);
+    console.log(`🔧 Конфигурация Selenium-парсера обновлена: ${config.name}`);
     res.json({
       success: true,
-      message: 'Конфигурация парсера сохранена',
+      message: 'Конфигурация Selenium-парсера сохранена',
       config: config
     });
   } catch (error) {
-    console.error('Ошибка сохранения конфигурации парсера:', error);
+    console.error('Ошибка сохранения конфигурации Selenium-парсера:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
@@ -385,7 +378,7 @@ router.post('/admin/parser-test', async (req, res) => {
     console.log(`🧪 Тестирование парсера: ${testConfig.name}`);
     
     // Валидация конфигурации
-    const validation = webParser.validateConfig(testConfig);
+    const validation = global.webParserSelenium.validateConfig(testConfig);
     if (!validation.isValid) {
       return res.status(400).json({
         error: 'Неверная конфигурация парсера',
@@ -394,7 +387,7 @@ router.post('/admin/parser-test', async (req, res) => {
     }
     
     // Тестирование парсера
-    const result = await webParser.testParser(testConfig);
+    const result = await global.webParserSelenium.testParser(testConfig);
     
     res.json({
       success: true,
@@ -413,7 +406,7 @@ router.post('/admin/parser-test', async (req, res) => {
 // Получить статус парсера
 router.get('/admin/parser-status', (req, res) => {
   try {
-    const status = webParser.getStatus();
+    const status = global.webParserSelenium.getStatus();
     
     res.json({
       success: true,
@@ -428,7 +421,7 @@ router.get('/admin/parser-status', (req, res) => {
 // Принудительный парсинг с текущей конфигурацией
 router.post('/admin/parser-run', async (req, res) => {
   try {
-    const status = webParser.getStatus();
+    const status = global.webParserSelenium.getStatus();
     
     if (!status.isConfigured) {
       return res.status(400).json({
@@ -438,7 +431,7 @@ router.post('/admin/parser-run', async (req, res) => {
     
     console.log('🚀 Принудительный запуск парсера...');
     
-    const result = await webParser.parsePage();
+    const result = await global.webParserSelenium.parsePage();
     
     res.json({
       success: true,

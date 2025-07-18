@@ -14,6 +14,12 @@ import { externalAPI } from './externalAPI.js';
 import memoryVotesRouter from './routes/memoryVotes.js';
 import { config, getCorsOrigins } from '../config.js';
 
+// Инициализация Selenium-парсера глобально
+import('./webParserSelenium.js').then(module => {
+  global.webParserSelenium = module.default;
+  global.webParserSelenium.loadConfig && global.webParserSelenium.loadConfig();
+});
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -327,9 +333,7 @@ async function startServer() {
     console.log('🚀 Запуск UFC сервера без БД...');
     
     // Инициализируем Selenium парсер
-    const webParser = await import('./webParserSelenium.js');
-    await webParser.default.loadConfig();
-    console.log('📥 Конфигурация парсера загружена');
+    // Удалить все импорты и вызовы webParser, если они есть
     
     // Восстанавливаем состояние из backup (если есть)
     const restored = await memoryStorage.restoreFromFile();

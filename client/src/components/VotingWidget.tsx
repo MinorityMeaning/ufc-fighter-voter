@@ -56,7 +56,9 @@ export const VotingWidget: React.FC<VotingWidgetProps> = ({ fight, onVote }) => 
             <img src={fight.fighter1_image} alt={fight.fighter1_name} className="w-10 h-10 rounded-none border-2 border-ufc-gray-600 object-cover object-top" />
             <div className="truncate">
               <div className="font-display text-sm font-bold text-white truncate">{fight.fighter1_name}</div>
-              <div className="vote-counter text-[10px] text-ufc-gold font-bold">{fighter1Votes} голосов</div>
+              {hasVoted && (
+                <div className="vote-counter text-[10px] text-ufc-gold font-bold">{fighter1Votes} голосов</div>
+              )}
             </div>
           </div>
           {/* VS + Total */}
@@ -80,24 +82,33 @@ export const VotingWidget: React.FC<VotingWidgetProps> = ({ fight, onVote }) => 
             <img src={fight.fighter2_image} alt={fight.fighter2_name} className="w-10 h-10 rounded-none border-2 border-ufc-gray-600 object-cover object-top" />
             <div className="text-right truncate">
               <div className="font-display text-sm font-bold text-white truncate">{fight.fighter2_name}</div>
-              <div className="vote-counter text-[10px] text-ufc-gold font-bold">{fighter2Votes} голосов</div>
+              {hasVoted && (
+                <div className="vote-counter text-[10px] text-ufc-gold font-bold">{fighter2Votes} голосов</div>
+              )}
             </div>
           </div>
         </div>
         {/* Progress Bar */}
-        <div className="progress-bar mt-2 flex rounded-none">
-          <div
-            className="progress-fill-green flex items-center justify-center"
-            style={{ width: `${percent1}%`, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
-          >
-            {percent1 > 0 ? <span className="text-[10px]">{percent1}%</span> : ''}
-          </div>
-          <div
-            className="progress-fill-blue flex items-center justify-center"
-            style={{ width: `${percent2}%`, borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
-          >
-            {percent2 > 0 ? <span className="text-[10px]">{percent2}%</span> : ''}
-          </div>
+        <div className="progress-bar mt-2 flex rounded-none" style={{ minHeight: '1rem' }}>
+          {hasVoted ? (
+            <>
+              <div
+                className="progress-fill-green flex items-center justify-center"
+                style={{ width: `${percent1}%`, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
+              >
+                {percent1 > 0 ? <span className="text-[10px]">{percent1}%</span> : ''}
+              </div>
+              <div
+                className="progress-fill-blue flex items-center justify-center"
+                style={{ width: `${percent2}%`, borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+              >
+                {percent2 > 0 ? <span className="text-[10px]">{percent2}%</span> : ''}
+              </div>
+            </>
+          ) : (
+            // Пустой прогресс-бар для сохранения высоты
+            <div style={{ width: '100%', height: '100%' }} />
+          )}
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 {
   "name": "UFC.ru Live Parser",
-  "url": "https://ufc.ru/event/ufc-fight-night-july-12-2025",
+  "url": "https://ufc.ru/event/ufc-318",
   "selectors": {
     "fightContainer": ".c-listing-fight",
     "fighter1Name": ".c-listing-fight__corner-name--red",
@@ -12,34 +12,5 @@
     "description": ".c-listing-fight__class-text",
     "liveIndicator": ".c-listing-fight__banner--live, .c-listing-ticker-fightcard__live"
   },
-  "isActive": true,
-  "testResult": {
-    "success": true,
-    "data": {
-      "fighter1_name": "Деррик Льюис",
-      "fighter2_name": "Таллисон Тейшейра",
-      "fighter1_image": "https://ufc.com/images/styles/event_fight_card_upper_body_of_standing_athlete/s3/2025-07/LEWIS_DERRICK_L_07-12.png?itok=dAwCPEnZ",
-      "fighter2_image": "https://ufc.com/images/styles/event_fight_card_upper_body_of_standing_athlete/s3/2025-07/TEIXEIRA_TALLISON_R_07-12.png?itok=4Flx7vbL",
-      "event_name": "UFC Fight Night",
-      "event_time": null,
-      "description": "Тяжелый вес -",
-      "is_live": true,
-      "has_outcome": true,
-      "parsedAt": "2025-07-13T14:52:18.532Z",
-      "sourceUrl": "https://ufc.ru/event/ufc-fight-night-july-12-2025",
-      "id": "parsed-0JTQtdGA"
-    },
-    "message": "Парсер работает корректно",
-    "extractedFields": {
-      "fighter1_name": true,
-      "fighter2_name": true,
-      "fighter1_image": true,
-      "fighter2_image": true,
-      "event_name": true,
-      "event_time": false,
-      "description": true,
-      "is_live": true
-    }
-  },
-  "lastTest": "2025-07-13T14:52:18.559Z"
+  "isActive": true
 }

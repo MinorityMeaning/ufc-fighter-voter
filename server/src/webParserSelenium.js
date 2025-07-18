@@ -507,6 +507,51 @@ class WebParserSelenium {
     };
   }
 
+  // Получение текущей конфигурации парсера
+  getConfig() {
+    return this.config;
+  }
+
+  // Валидация конфига (url и name обязательны)
+  validateConfig(config) {
+    const errors = [];
+    if (!config.url) errors.push('URL обязателен');
+    if (!config.name) errors.push('Имя парсера обязательно');
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+  // Тестирование парсера с новым конфигом
+  async testParser(testConfig) {
+    try {
+      await this.setConfig(testConfig);
+      const result = await this.parsePage();
+      return { success: true, result };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Сохранение конфигурации в файл
+  async saveConfig() {
+    if (!this.config) return;
+    try {
+      await fs.promises.writeFile(this.configPath, JSON.stringify(this.config, null, 2));
+      console.log(`💾 Конфигурация парсера сохранена: ${this.config.name}`);
+    } catch (error) {
+      console.error('❌ Ошибка сохранения конфигурации парсера:', error);
+    }
+  }
+
+  // Установка конфигурации парсера
+  async setConfig(config) {
+    this.config = config;
+    console.log(`🔧 Настройка Selenium-парсера: ${config.name}`);
+    await this.saveConfig();
+  }
+
   // Очистка ресурсов
   async cleanup() {
     await this.closeDriver();
