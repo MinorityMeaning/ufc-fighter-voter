@@ -173,6 +173,13 @@ class ExternalFightAPI {
     const currentNames = `${currentFight.fighter1_name} vs ${currentFight.fighter2_name}`;
     const newNames = `${newFightData.fighter1_name} vs ${newFightData.fighter2_name}`;
     
+    // Проверяем LIVE статус - если новый бой LIVE, а текущий нет, то переключаемся
+    if (newFightData.is_live && !currentFight.is_live) {
+      console.log(`   Результат: НОВЫЙ LIVE бой -> НАЧИНАЕМ НОВЫЙ`);
+      return true;
+    }
+    
+    // Если имена разные, начинаем новый бой
     const shouldStart = currentNames !== newNames;
     console.log(`   Результат: ${shouldStart ? 'РАЗНЫЕ ИМЕНА -> НАЧИНАЕМ НОВЫЙ' : 'ТЕ ЖЕ ИМЕНА -> НЕ НАЧИНАЕМ'}`);
     
@@ -229,11 +236,26 @@ class ExternalFightAPI {
       
       const result = await webParser.parsePage();
       
-      // Если результат - массив боев, берем первый
+      // Если результат - массив боев, ищем LIVE бой или берем первый
       let fightData = result;
       if (Array.isArray(result) && result.length > 0) {
-        fightData = result[0];
-        console.log(`📄 Возвращаем бой: ${fightData.fighter1_name} vs ${fightData.fighter2_name} (живой: ${fightData.is_live ? 'ДА' : 'НЕТ'})`);
+        // Сначала ищем LIVE бой
+        const liveFight = result.find(fight => fight.is_live && !fight.has_outcome);
+        if (liveFight) {
+          fightData = liveFight;
+          console.log(`🔥 Найден LIVE бой: ${fightData.fighter1_name} vs ${fightData.fighter2_name}`);
+        } else {
+          // Если LIVE боя нет, берем первый бой без результата
+          const activeFight = result.find(fight => !fight.has_outcome);
+          if (activeFight) {
+            fightData = activeFight;
+            console.log(`📄 Возвращаем активный бой: ${fightData.fighter1_name} vs ${fightData.fighter2_name} (живой: ${fightData.is_live ? 'ДА' : 'НЕТ'})`);
+          } else {
+            // Если все бои завершены, берем первый
+            fightData = result[0];
+            console.log(`📄 Возвращаем завершенный бой: ${fightData.fighter1_name} vs ${fightData.fighter2_name} (живой: ${fightData.is_live ? 'ДА' : 'НЕТ'})`);
+          }
+        }
       }
       
       // Добавляем дополнительные поля для совместимости

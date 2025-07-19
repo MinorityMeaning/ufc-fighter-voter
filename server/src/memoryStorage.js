@@ -59,6 +59,7 @@ class MemoryStorage {
       startTime: new Date().toISOString(),
       status: 'active',
       is_active: true, // Добавляем поле активности для клиента
+      is_live: fightData.is_live || false, // Добавляем LIVE статус
       fighter1_votes: 0, // Добавляем счетчики голосов
       fighter2_votes: 0,
       total_votes: 0
@@ -69,7 +70,7 @@ class MemoryStorage {
     this.gameState.isActive = true;
     this.gameState.lastUpdate = new Date().toISOString();
 
-    console.log(`🥊 Новый бой начался: ${fightData.fighter1_name} vs ${fightData.fighter2_name}`);
+    console.log(`🥊 Новый бой начался: ${fightData.fighter1_name} vs ${fightData.fighter2_name} (живой: ${fightData.is_live ? 'ДА' : 'НЕТ'})`);
     return this.gameState.currentFight;
   }
 
