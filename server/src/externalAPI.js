@@ -174,6 +174,10 @@ class ExternalFightAPI {
     const newNames = `${newFightData.fighter1_name} vs ${newFightData.fighter2_name}`;
     
     // Проверяем LIVE статус - если новый бой LIVE, а текущий нет, то переключаемся
+    console.log(`   🔍 Проверка LIVE статуса:`);
+    console.log(`      Текущий бой LIVE: ${currentFight.is_live ? 'ДА' : 'НЕТ'}`);
+    console.log(`      Новый бой LIVE: ${newFightData.is_live ? 'ДА' : 'НЕТ'}`);
+    
     if (newFightData.is_live && !currentFight.is_live) {
       console.log(`   Результат: НОВЫЙ LIVE бой -> НАЧИНАЕМ НОВЫЙ`);
       return true;
@@ -235,10 +239,21 @@ class ExternalFightAPI {
       console.log(`🌐 Парсинг веб-страницы: ${status.targetUrl}`);
       
       const result = await webParser.parsePage();
+      console.log(`📥 Результат парсинга получен:`, typeof result, Array.isArray(result) ? `массив из ${result.length} элементов` : 'объект');
       
       // Если результат - массив боев, ищем LIVE бой или берем первый
+      console.log(`🔍 Начинаем анализ результата парсинга...`);
       let fightData = result;
       if (Array.isArray(result) && result.length > 0) {
+        console.log(`🔍 Анализ ${result.length} боев для выбора...`);
+        
+        // Выводим все LIVE бои
+        const liveFights = result.filter(fight => fight.is_live && !fight.has_outcome);
+        console.log(`🔍 Найдено ${liveFights.length} LIVE боев без результата:`);
+        liveFights.forEach((fight, index) => {
+          console.log(`   ${index + 1}. ${fight.fighter1_name} vs ${fight.fighter2_name}`);
+        });
+        
         // Сначала ищем LIVE бой
         const liveFight = result.find(fight => fight.is_live && !fight.has_outcome);
         if (liveFight) {

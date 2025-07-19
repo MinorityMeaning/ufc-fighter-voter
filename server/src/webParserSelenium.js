@@ -361,6 +361,13 @@ class WebParserSelenium {
               const isHidden = liveBanner.classList.contains('hidden');
               // Бой живой только если live banner НЕ имеет класс hidden
               isLive = !isHidden;
+              console.log(`🔍 Бой ${index + 1} LIVE статус: banner=${liveBanner ? 'НАЙДЕН' : 'НЕ НАЙДЕН'}, hidden=${isHidden}, isLive=${isLive}`);
+            }
+            
+            // Если не нашли live banner для конкретного боя, используем глобальный статус
+            if (!isLive && liveAnalysis.liveStatus) {
+              isLive = true;
+              console.log(`🔍 Бой ${index + 1} LIVE статус: используем глобальный статус, isLive=${isLive}`);
             }
             
             // Проверяем наличие элемента с результатом боя
