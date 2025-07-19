@@ -26,7 +26,6 @@ interface VoteStats {
 
 function App() {
   const [mode, setMode] = useState<'voting' | 'admin'>('voting');
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [currentFight, setCurrentFight] = useState<Fight | null>(null);
   const [voteStats, setVoteStats] = useState<VoteStats>({ fighter1: 0, fighter2: 0, total: 0 });
@@ -132,7 +131,6 @@ function App() {
     });
 
     socketRef.current = newSocket;
-    setSocket(newSocket);
 
     return () => {
       if (newSocket.connected) {
