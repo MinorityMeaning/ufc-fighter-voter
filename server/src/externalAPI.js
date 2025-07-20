@@ -260,11 +260,40 @@ class ExternalFightAPI {
           fightData = liveFight;
           console.log(`🔥 Найден LIVE бой: ${fightData.fighter1_name} vs ${fightData.fighter2_name}`);
         } else {
-          // Если LIVE боя нет, берем первый бой без результата
-          const activeFight = result.find(fight => !fight.has_outcome);
-          if (activeFight) {
-            fightData = activeFight;
-            console.log(`📄 Возвращаем активный бой: ${fightData.fighter1_name} vs ${fightData.fighter2_name} (живой: ${fightData.is_live ? 'ДА' : 'НЕТ'})`);
+          // Если LIVE боя нет, ищем следующую пару бойцов после той, у которой есть outcome
+          let nextFight = null;
+          
+          // Ищем первый бой с outcome
+          let firstCompletedFightIndex = -1;
+          for (let i = 0; i < result.length; i++) {
+            if (result[i].has_outcome) {
+              firstCompletedFightIndex = i;
+              console.log(`🔍 Первый завершенный бой на позиции ${i + 1}: ${result[i].fighter1_name} vs ${result[i].fighter2_name}`);
+              break;
+            }
+          }
+          
+          if (firstCompletedFightIndex !== -1) {
+            // Ищем бой до первого завершенного
+            for (let i = firstCompletedFightIndex - 1; i >= 0; i--) {
+              if (!result[i].has_outcome) {
+                nextFight = result[i];
+                console.log(`📄 Найден бой до завершенного на позиции ${i + 1}: ${nextFight.fighter1_name} vs ${nextFight.fighter2_name}`);
+                break;
+              }
+            }
+          }
+          
+          // Если не нашли после завершенного, берем первый без результата
+          if (!nextFight) {
+            nextFight = result.find(fight => !fight.has_outcome);
+            if (nextFight) {
+              console.log(`📄 Возвращаем первый активный бой: ${nextFight.fighter1_name} vs ${nextFight.fighter2_name} (живой: ${nextFight.is_live ? 'ДА' : 'НЕТ'})`);
+            }
+          }
+          
+          if (nextFight) {
+            fightData = nextFight;
           } else {
             // Если все бои завершены, берем первый
             fightData = result[0];
