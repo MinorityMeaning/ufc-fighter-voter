@@ -188,12 +188,12 @@ class ExternalFightAPI {
     const currentNames = `${currentFight.fighter1_name} vs ${currentFight.fighter2_name}`;
     const newNames = `${newFightData.fighter1_name} vs ${newFightData.fighter2_name}`;
     
-    // Проверяем LIVE статус - если новый бой LIVE, а текущий нет, то переключаемся
+    // Проверяем LIVE статус - если новый бой LIVE, то переключаемся
     console.log(`   🔍 Проверка LIVE статуса:`);
     console.log(`      Текущий бой LIVE: ${currentFight.is_live ? 'ДА' : 'НЕТ'}`);
     console.log(`      Новый бой LIVE: ${newFightData.is_live ? 'ДА' : 'НЕТ'}`);
     
-    if (newFightData.is_live && !currentFight.is_live) {
+    if (newFightData.is_live) {
       console.log(`   Результат: НОВЫЙ LIVE бой -> НАЧИНАЕМ НОВЫЙ`);
       return true;
     }
@@ -266,53 +266,61 @@ class ExternalFightAPI {
         const liveFights = result.filter(fight => fight.is_live && !fight.has_outcome);
         console.log(`🔍 Найдено ${liveFights.length} LIVE боев без результата:`);
         liveFights.forEach((fight, index) => {
-          console.log(`   ${index + 1}. ${fight.fighter1_name} vs ${fight.fighter2_name}`);
+          const hasBanner = fight.has_visible_live_banner ? '✅' : '❌';
+          console.log(`   ${index + 1}. ${fight.fighter1_name} vs ${fight.fighter2_name} (видимый banner: ${hasBanner})`);
         });
         
-        // Сначала ищем LIVE бой
-        const liveFight = result.find(fight => fight.is_live && !fight.has_outcome);
-        if (liveFight) {
-          fightData = liveFight;
-          console.log(`🔥 Найден LIVE бой: ${fightData.fighter1_name} vs ${fightData.fighter2_name}`);
+        // Сначала ищем LIVE бой с видимым banner'ом
+        const liveFightWithBanner = result.find(fight => fight.is_live && fight.has_visible_live_banner && !fight.has_outcome);
+        if (liveFightWithBanner) {
+          fightData = liveFightWithBanner;
+          console.log(`🔥 Найден LIVE бой с видимым banner'ом: ${fightData.fighter1_name} vs ${fightData.fighter2_name}`);
         } else {
-          // Если LIVE боя нет, ищем следующую пару бойцов после той, у которой есть outcome
-          let nextFight = null;
-          
-          // Ищем первый бой с outcome
-          let firstCompletedFightIndex = -1;
-          for (let i = 0; i < result.length; i++) {
-            if (result[i].has_outcome) {
-              firstCompletedFightIndex = i;
-              console.log(`🔍 Первый завершенный бой на позиции ${i + 1}: ${result[i].fighter1_name} vs ${result[i].fighter2_name}`);
-              break;
-            }
-          }
-          
-          if (firstCompletedFightIndex !== -1) {
-            // Ищем бой до первого завершенного
-            for (let i = firstCompletedFightIndex - 1; i >= 0; i--) {
-              if (!result[i].has_outcome) {
-                nextFight = result[i];
-                console.log(`📄 Найден бой до завершенного на позиции ${i + 1}: ${nextFight.fighter1_name} vs ${nextFight.fighter2_name}`);
+          // Если нет боя с видимым banner'ом, ищем любой LIVE бой
+          const liveFight = result.find(fight => fight.is_live && !fight.has_outcome);
+          if (liveFight) {
+            fightData = liveFight;
+            console.log(`🔥 Найден LIVE бой (без видимого banner'а): ${fightData.fighter1_name} vs ${fightData.fighter2_name}`);
+          } else {
+            // Если LIVE боя нет, ищем следующую пару бойцов после той, у которой есть outcome
+            let nextFight = null;
+            
+            // Ищем первый бой с outcome
+            let firstCompletedFightIndex = -1;
+            for (let i = 0; i < result.length; i++) {
+              if (result[i].has_outcome) {
+                firstCompletedFightIndex = i;
+                console.log(`🔍 Первый завершенный бой на позиции ${i + 1}: ${result[i].fighter1_name} vs ${result[i].fighter2_name}`);
                 break;
               }
             }
-          }
-          
-          // Если не нашли после завершенного, берем первый без результата
-          if (!nextFight) {
-            nextFight = result.find(fight => !fight.has_outcome);
-            if (nextFight) {
-              console.log(`📄 Возвращаем первый активный бой: ${nextFight.fighter1_name} vs ${nextFight.fighter2_name} (живой: ${nextFight.is_live ? 'ДА' : 'НЕТ'})`);
+            
+            if (firstCompletedFightIndex !== -1) {
+              // Ищем бой до первого завершенного
+              for (let i = firstCompletedFightIndex - 1; i >= 0; i--) {
+                if (!result[i].has_outcome) {
+                  nextFight = result[i];
+                  console.log(`📄 Найден бой до завершенного на позиции ${i + 1}: ${nextFight.fighter1_name} vs ${nextFight.fighter2_name}`);
+                  break;
+                }
+              }
             }
-          }
-          
-          if (nextFight) {
-            fightData = nextFight;
-          } else {
-            // Если все бои завершены, берем первый
-            fightData = result[0];
-            console.log(`📄 Возвращаем завершенный бой: ${fightData.fighter1_name} vs ${fightData.fighter2_name} (живой: ${fightData.is_live ? 'ДА' : 'НЕТ'})`);
+            
+            // Если не нашли после завершенного, берем первый без результата
+            if (!nextFight) {
+              nextFight = result.find(fight => !fight.has_outcome);
+              if (nextFight) {
+                console.log(`📄 Возвращаем первый активный бой: ${nextFight.fighter1_name} vs ${nextFight.fighter2_name} (живой: ${nextFight.is_live ? 'ДА' : 'НЕТ'})`);
+              }
+            }
+            
+            if (nextFight) {
+              fightData = nextFight;
+            } else {
+              // Если все бои завершены, берем первый
+              fightData = result[0];
+              console.log(`📄 Возвращаем завершенный бой: ${fightData.fighter1_name} vs ${fightData.fighter2_name} (живой: ${fightData.is_live ? 'ДА' : 'НЕТ'})`);
+            }
           }
         }
       }

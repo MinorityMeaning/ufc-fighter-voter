@@ -356,19 +356,21 @@ class WebParserSelenium {
             // Проверяем live статус для этого боя
             const liveBanner = fightElement.querySelector(selectors.liveIndicator);
             let isLive = false;
+            let hasVisibleLiveBanner = false;
             
             if (liveBanner) {
               const isHidden = liveBanner.classList.contains('hidden');
               // Бой живой только если live banner НЕ имеет класс hidden
               isLive = !isHidden;
-              console.log(`🔍 Бой ${index + 1} LIVE статус: banner=${liveBanner ? 'НАЙДЕН' : 'НЕ НАЙДЕН'}, hidden=${isHidden}, isLive=${isLive}`);
+              hasVisibleLiveBanner = !isHidden;
+              console.log(`🔍 Бой ${index + 1} LIVE статус: banner=${liveBanner ? 'НАЙДЕН' : 'НЕ НАЙДЕН'}, hidden=${isHidden}, isLive=${isLive}, hasVisibleBanner=${hasVisibleLiveBanner}`);
             }
             
-            // Если не нашли live banner для конкретного боя, используем глобальный статус
-            if (!isLive && liveAnalysis.liveStatus) {
-              isLive = true;
-              console.log(`🔍 Бой ${index + 1} LIVE статус: используем глобальный статус, isLive=${isLive}`);
-            }
+            // НЕ используем глобальный статус - только индивидуальные banner'ы
+            // if (!isLive && liveAnalysis.liveStatus) {
+            //   isLive = true;
+            //   console.log(`🔍 Бой ${index + 1} LIVE статус: используем глобальный статус, isLive=${isLive}`);
+            // }
             
             // Проверяем наличие элемента с результатом боя
             const outcomeElement = fightElement.querySelector('.c-listing-fight__outcome--win');
@@ -383,6 +385,7 @@ class WebParserSelenium {
               event_time: document.querySelector(selectors.eventTime)?.textContent?.trim() || '',
               description: description,
               is_live: isLive,
+              has_visible_live_banner: hasVisibleLiveBanner,
               has_outcome: hasOutcome,
               parsedAt: new Date().toISOString(),
               sourceUrl: window.location.href
