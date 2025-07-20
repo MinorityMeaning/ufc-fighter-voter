@@ -60,7 +60,7 @@ class ExternalFightAPI {
     }, this.config.fullCheckInterval);
   }
 
-  // Быстрая проверка новых боев (без перезагрузки страницы)
+  // Быстрая проверка новых боев (с парсингом всех боев)
   async quickCheckForNewFights() {
     if (this.isChecking) {
       return; // Пропускаем, если уже идет проверка
@@ -73,12 +73,27 @@ class ExternalFightAPI {
         return; // Парсер не готов
       }
 
-      // Быстрая проверка через Selenium
-      const quickResult = await webParser.quickCheck();
+      console.log('⚡ Быстрая проверка с парсингом всех боев...');
       
-      if (quickResult.liveStatus) {
-        console.log('🔥 Обнаружен LIVE бой! Запускаем полную проверку...');
-        await this.checkForNewFights();
+      // Делаем полную проверку, но без перезагрузки страницы
+      const currentState = memoryStorage.getCurrentState();
+      const newFightData = await this.fetchCurrentFight();
+      
+      if (!newFightData) {
+        console.log('😴 Активных боев не найдено');
+        return;
+      }
+
+      // Проверяем, отличается ли новый бой от текущего
+      if (this.shouldStartNewFight(currentState.fight, newFightData)) {
+        console.log(`🆕 Быстрая проверка: найден новый бой: ${newFightData.fighter1_name} vs ${newFightData.fighter2_name}`);
+        
+        const fight = memoryStorage.startNewFight(newFightData);
+        
+        // Уведомляем всех клиентов о новом бое
+        this.broadcastNewFight(fight);
+      } else {
+        console.log('✅ Быстрая проверка: текущий бой все еще активен');
       }
 
     } catch (error) {
