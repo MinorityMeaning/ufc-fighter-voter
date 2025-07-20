@@ -193,11 +193,6 @@ class ExternalFightAPI {
     console.log(`      Текущий бой LIVE: ${currentFight.is_live ? 'ДА' : 'НЕТ'}`);
     console.log(`      Новый бой LIVE: ${newFightData.is_live ? 'ДА' : 'НЕТ'}`);
     
-    if (newFightData.is_live) {
-      console.log(`   Результат: НОВЫЙ LIVE бой -> НАЧИНАЕМ НОВЫЙ`);
-      return true;
-    }
-    
     // Если имена разные, начинаем новый бой
     const shouldStart = currentNames !== newNames;
     console.log(`   Результат: ${shouldStart ? 'РАЗНЫЕ ИМЕНА -> НАЧИНАЕМ НОВЫЙ' : 'ТЕ ЖЕ ИМЕНА -> НЕ НАЧИНАЕМ'}`);
@@ -329,9 +324,33 @@ class ExternalFightAPI {
       fightData.status = 'active';
       fightData.is_active = true;
       fightData.startTime = new Date().toISOString();
-      fightData.fighter1_votes = 0;
-      fightData.fighter2_votes = 0;
-      fightData.total_votes = 0;
+      
+      // Сохраняем существующие голоса, если это тот же бой
+      const currentState = memoryStorage.getCurrentState();
+      if (currentState.fight) {
+        const currentNames = `${currentState.fight.fighter1_name} vs ${currentState.fight.fighter2_name}`;
+        const newNames = `${fightData.fighter1_name} vs ${fightData.fighter2_name}`;
+        
+        if (currentNames === newNames) {
+          // Это тот же бой - сохраняем голоса
+          fightData.fighter1_votes = currentState.fight.fighter1_votes || 0;
+          fightData.fighter2_votes = currentState.fight.fighter2_votes || 0;
+          fightData.total_votes = currentState.fight.total_votes || 0;
+          console.log(`💾 Сохраняем существующие голоса: ${fightData.fighter1_votes} vs ${fightData.fighter2_votes}`);
+        } else {
+          // Новый бой - обнуляем голоса
+          fightData.fighter1_votes = 0;
+          fightData.fighter2_votes = 0;
+          fightData.total_votes = 0;
+          console.log(`🆕 Новый бой - обнуляем голоса`);
+        }
+      } else {
+        // Первый бой - обнуляем голоса
+        fightData.fighter1_votes = 0;
+        fightData.fighter2_votes = 0;
+        fightData.total_votes = 0;
+        console.log(`🆕 Первый бой - обнуляем голоса`);
+      }
       
       return fightData;
     } catch (error) {
